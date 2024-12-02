@@ -1,0 +1,3 @@
+pip install ultralytics gtts playsound opencv-python
+
+pip install ultralytics gtts pygame opencv-python
