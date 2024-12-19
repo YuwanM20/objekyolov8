@@ -14,7 +14,7 @@ def play_sound(file_name):
         continue  # Tunggu hingga audio selesai diputar
 
 # Path model YOLOv8 (gunakan model ringan jika tersedia)
-model_path = "model.pt"  # Pastikan Anda memiliki model nano untuk percepatan
+model_path = "model_n.pt" 
 model = YOLO(model_path)
 
 # Inisialisasi kamera (gunakan 0 untuk kamera default)
@@ -32,18 +32,17 @@ print("Tekan 'q' untuk keluar.")
 
 # Daftar kelas yang akan dideteksi dan file audio terkait
 sound_mapping = {
-    "person": "sound/orang.mp3",  # Ganti dengan path file audio untuk "person"
-    "chair": "sound/kursi.mp3",    # Ganti dengan path file audio untuk "chair"
-    "table": "sound/meja.mp3",    # Ganti dengan path file audio untuk "table"
-    "door": "sound/pintu.mp3"       # Ganti dengan path file audio untuk "door"
+    "person": "sound/orang.mp3",
+    "chair": "sound/kursi.mp3",
+    "table": "sound/meja.mp3",
+    "door": "sound/pintu.mp3"
 }
 
 # Suara untuk area kosong
-empty_sound = "sound/kosong.mp3"  # Ganti dengan path file audio untuk "Di depan kosong"
+empty_sound = "sound/kosong.mp3"
 
-# Variabel waktu terakhir untuk cooldown
-last_detection_time = time.time()
-cooldown = 1.5  # Waktu cooldown antara suara (dalam detik)
+# Set objek yang sudah diputar suaranya
+played_objects = set()
 
 while True:
     ret, frame = cap.read()
@@ -51,37 +50,37 @@ while True:
         print("Error: Gagal membaca frame dari kamera.")
         break
 
-    # Resize frame untuk mempercepat inferensi (tanpa mengubah tampilan kamera)
-    small_frame = cv2.resize(frame, (640, 480))  # Resolusi lebih kecil untuk YOLOv8
+    # Resize frame untuk mempercepat inferensi
+    small_frame = cv2.resize(frame, (640, 480))
 
     # Deteksi objek menggunakan YOLOv8
-    results = model.predict(small_frame, conf=0.5, imgsz=640)  # Optimalkan ukuran gambar
-    annotated_frame = results[0].plot()  # Annotasi frame dengan hasil deteksi
+    results = model.predict(small_frame, conf=0.5, imgsz=640)
+    annotated_frame = results[0].plot()
 
-    # Inisialisasi variabel untuk melacak objek yang terdeteksi
-    detected_objects = []
+    # Objek yang terdeteksi pada frame ini
+    detected_objects = set()
 
-    # Iterasi melalui hasil deteksi
     for result in results:
         for box in result.boxes:
             cls = int(box.cls[0])  # Indeks kelas
             label = result.names[cls]  # Nama kelas
             
-            if label in sound_mapping and label not in detected_objects:
-                detected_objects.append(label)  # Tambahkan objek yang terdeteksi ke daftar
-                
-                # Output suara jika waktu cooldown terpenuhi
-                current_time = time.time()
-                if current_time - last_detection_time > cooldown:
-                    play_sound(sound_mapping[label])
-                    last_detection_time = current_time
+            if label in sound_mapping:
+                detected_objects.add(label)  # Tambahkan ke objek yang terdeteksi
 
-    # Jika tidak ada objek terdeteksi
-    if not detected_objects:
-        current_time = time.time()
-        if current_time - last_detection_time > cooldown:
-            play_sound(empty_sound)  # Memutar suara untuk area kosong
-            last_detection_time = current_time
+    # Periksa objek baru yang belum diputar suaranya
+    new_objects = detected_objects - played_objects
+
+    if new_objects:
+        # Mainkan suara untuk objek baru
+        for obj in new_objects:
+            play_sound(sound_mapping[obj])
+            played_objects.add(obj)
+    elif not detected_objects:
+        # Jika tidak ada objek, mainkan suara kosong
+        if played_objects:
+            play_sound(empty_sound)
+            played_objects.clear()
 
     # Tampilkan hasil deteksi
     cv2.imshow("YOLOv8 Detection", annotated_frame)

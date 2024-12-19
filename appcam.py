@@ -2,7 +2,7 @@ import cv2
 from ultralytics import YOLO
 
 # Ganti dengan path model YOLOv8 yang telah Anda latih
-model_path = "model.pt"
+model_path = "model_n.pt"
 model = YOLO(model_path)
 
 # Inisialisasi kamera (gunakan 0 untuk kamera default)
